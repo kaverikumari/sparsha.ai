@@ -1,0 +1,11 @@
+{
+  "name": "SPARSHA.AI - Maternal & Fetal Health Risk Assessment",
+  "description": "AI-powered maternal healthcare platform for Gestational Diabetes Mellitus (GDM) screening, child neurodevelopmental risk assessment, personalized recommendations, and doctor-patient collaboration.",
+  "requestFramePermissions": [
+    "geolocation",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

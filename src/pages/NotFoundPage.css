@@ -1,0 +1,46 @@
+.nf-wrap {
+  min-height: 100vh;
+  background: var(--surface);
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.nf-inner {
+  text-align: center; position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
+  padding: 2rem;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  max-width: 480px; width: 90%;
+}
+.nf-logo {
+  font-family: var(--font-display); font-size: 1.4rem; font-weight: 800;
+  color: var(--navy); margin-bottom: .25rem;
+}
+.nf-logo span { color: var(--teal-dark); }
+
+.nf-code {
+  font-family: var(--font-display);
+  font-size: clamp(4.5rem, 15vw, 6.5rem); font-weight: 800; line-height: 1;
+  color: var(--navy);
+  letter-spacing: -0.03em;
+}
+.nf-title {
+  font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; color: var(--navy);
+}
+.nf-sub {
+  color: var(--muted); max-width: 380px; line-height: 1.6; font-size: 0.92rem;
+}
+.nf-actions {
+  display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center;
+  margin-top: .5rem;
+}
+
+/* blobs */
+.nf-blob {
+  position: absolute; border-radius: 50%;
+  filter: blur(80px); opacity: .25; pointer-events: none;
+}
+.nf-b1 { width: 400px; height: 400px; background: #99f6e4; top: -120px; left: -100px; }
+.nf-b2 { width: 300px; height: 300px; background: #fecdd3; bottom: -80px; right: -60px; }

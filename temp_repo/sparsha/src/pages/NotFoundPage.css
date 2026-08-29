@@ -1,0 +1,41 @@
+.nf-wrap {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f0fdfa, #fff7ed);
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.nf-inner {
+  text-align: center; position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
+  padding: 2rem;
+}
+.nf-logo {
+  font-family: var(--font-d); font-size: 1.4rem; font-weight: 900;
+  color: var(--teal-d); margin-bottom: .5rem;
+}
+.nf-logo span { color: var(--rose); }
+
+.nf-code {
+  font-family: var(--font-d);
+  font-size: clamp(6rem, 20vw, 10rem); font-weight: 900; line-height: 1;
+  background: linear-gradient(135deg, var(--teal), var(--rose));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.nf-title {
+  font-family: var(--font-d); font-size: 1.8rem; font-weight: 700; color: var(--navy);
+}
+.nf-sub {
+  color: var(--muted); max-width: 380px; line-height: 1.65;
+}
+.nf-actions {
+  display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+  margin-top: .5rem;
+}
+
+/* blobs */
+.nf-blob {
+  position: absolute; border-radius: 50%;
+  filter: blur(70px); opacity: .3; pointer-events: none;
+}
+.nf-b1 { width: 400px; height: 400px; background: #99f6e4; top: -120px; left: -100px; }
+.nf-b2 { width: 300px; height: 300px; background: #fda4af; bottom: -80px; right: -60px; }

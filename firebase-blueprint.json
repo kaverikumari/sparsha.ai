@@ -1,0 +1,108 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile containing identity, role, medical metadata, and access authorizations.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "enum": ["patient", "doctor", "admin", "family"] },
+        "patientId": { "type": "string", "maxLength": 12, "pattern": "^[A-Z0-9_-]+$" },
+        "pregnancyWeek": { "type": "string", "maxLength": 10 },
+        "age": { "type": "string", "maxLength": 10 },
+        "bloodGroup": { "type": "string", "maxLength": 10 },
+        "doctor": { "type": "string", "maxLength": 100 },
+        "hospital": { "type": "string", "maxLength": 150 },
+        "emergencyContact": { "type": "string", "maxLength": 30 },
+        "assignedDoctorId": { "type": "string", "maxLength": 128 },
+        "assignedPatients": { "type": "array" },
+        "approvedAccess": { "type": "array" },
+        "speciality": { "type": "string", "maxLength": 100 },
+        "city": { "type": "string", "maxLength": 100 },
+        "state": { "type": "string", "maxLength": 100 },
+        "pin": { "type": "string", "maxLength": 10 },
+        "workingLady": { "type": "string", "maxLength": 10 },
+        "familyDiabetes": { "type": "string", "maxLength": 15 },
+        "onboardingComplete": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "role"]
+    },
+    "Assessment": {
+      "title": "Assessment",
+      "description": "GDM and child neurodevelopmental risk assessment record with clinical inputs and predictive results.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "formData": { "type": "object" },
+        "result": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "result"]
+    },
+    "VoiceResult": {
+      "title": "VoiceResult",
+      "description": "Dysarthria acoustic analysis prediction result.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "result": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "result"]
+    },
+    "KickEntry": {
+      "title": "KickEntry",
+      "description": "Fetal kick counter tracking session entry.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "count": { "type": "number" },
+        "note": { "type": "string", "maxLength": 500 },
+        "recordedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "count"]
+    },
+    "AccessRequest": {
+      "title": "AccessRequest",
+      "description": "Authorization request from doctor or family member to access patient health records.",
+      "type": "object",
+      "properties": {
+        "fromUid": { "type": "string", "maxLength": 128 },
+        "fromName": { "type": "string", "maxLength": 100 },
+        "fromRole": { "type": "string", "enum": ["doctor", "family"] },
+        "toUid": { "type": "string", "maxLength": 128 },
+        "toPatientId": { "type": "string", "maxLength": 12 },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected", "revoked"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "respondedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fromUid", "toUid", "fromRole", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Stores user profiles including role, contact details, assigned doctors, and approved access list."
+    },
+    "/assessments/{assessmentId}": {
+      "schema": { "$ref": "#/entities/Assessment" },
+      "description": "Stores clinical GDM assessments and risk outputs."
+    },
+    "/voiceResults/{voiceId}": {
+      "schema": { "$ref": "#/entities/VoiceResult" },
+      "description": "Stores speech acoustic / dysarthria assessment outputs."
+    },
+    "/kickCounter/{entryId}": {
+      "schema": { "$ref": "#/entities/KickEntry" },
+      "description": "Stores fetal movement kick counter history."
+    },
+    "/accessRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/AccessRequest" },
+      "description": "Stores access requests from doctors/family to patients."
+    }
+  }
+}

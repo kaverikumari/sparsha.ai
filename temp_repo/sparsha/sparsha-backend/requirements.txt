@@ -1,0 +1,22 @@
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9      # for file uploads
+pydantic==2.7.1
+
+# ML
+xgboost==2.0.3
+scikit-learn==1.4.2
+numpy==1.26.4
+pandas==2.2.2
+joblib==1.4.0
+
+# Audio (dysarthria)
+librosa==0.10.2
+soundfile==0.12.1
+
+# Optional: real SHAP values
+# shap==0.45.0
+
+# Optional: CNN model
+# tensorflow==2.16.1
+# or: tensorflow-cpu==2.16.1  (lighter, no GPU needed)

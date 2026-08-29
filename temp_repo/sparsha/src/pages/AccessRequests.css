@@ -1,0 +1,31 @@
+.ar-layout { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.ar-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--rose); color: white;
+  font-size: .72rem; font-weight: 700; margin-left: .5rem;
+}
+
+.ar-empty { color: var(--muted); font-size: .88rem; padding: 1rem 0; text-align: center; }
+
+.ar-request-card {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .85rem 1rem; border-radius: 12px;
+  border: 1px solid var(--border); margin-bottom: .6rem;
+  background: #fafffe;
+}
+.ar-req-info { display: flex; align-items: center; gap: .85rem; }
+.ar-req-icon { font-size: 1.8rem; }
+.ar-req-name { font-weight: 700; font-size: .92rem; }
+.ar-req-role { font-size: .78rem; color: var(--muted); margin-top: .1rem; }
+.ar-req-actions { display: flex; gap: .5rem; }
+
+.ar-revoke-btn {
+  background: none; border: 1.5px solid #fca5a5;
+  color: #dc2626; border-radius: 999px;
+  padding: .3rem .85rem; font-family: var(--font-b);
+  font-size: .78rem; font-weight: 600; cursor: pointer;
+  transition: all .2s;
+}
+.ar-revoke-btn:hover { background: #fee2e2; }

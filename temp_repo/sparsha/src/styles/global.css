@@ -1,0 +1,177 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --teal:       #0d9488;
+  --teal-light: #14b8a6;
+  --teal-dark:  #0f766e;
+  --rose:       #fb7185;
+  --rose-light: #fda4af;
+  --amber:      #f59e0b;
+  --navy:       #0f172a;
+  --slate:      #1e293b;
+  --muted:      #64748b;
+  --surface:    #f0fdfa;
+  --white:      #ffffff;
+  --card-bg:    #ffffff;
+  --border:     #ccfbf1;
+
+  --font-display: 'Playfair Display', serif;
+  --font-body:    'DM Sans', sans-serif;
+
+  --radius: 16px;
+  --shadow: 0 4px 24px rgba(13,148,136,0.10);
+  --shadow-lg: 0 8px 40px rgba(13,148,136,0.18);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--surface);
+  color: var(--navy);
+  min-height: 100vh;
+}
+
+.app { min-height: 100vh; }
+
+/* ── Shared Nav ── */
+.nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 2.5rem;
+  background: var(--white);
+  box-shadow: 0 1px 0 var(--border);
+  position: sticky; top: 0; z-index: 100;
+}
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: 1.5rem; font-weight: 900;
+  color: var(--teal-dark);
+  letter-spacing: -0.5px;
+}
+.nav-logo span { color: var(--rose); }
+.nav-links { display: flex; gap: 1rem; align-items: center; }
+.nav-btn {
+  padding: 0.5rem 1.25rem;
+  border-radius: 999px;
+  border: none; cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 500; font-size: 0.9rem;
+  transition: all 0.2s;
+}
+.nav-btn.outline {
+  background: transparent;
+  border: 1.5px solid var(--teal);
+  color: var(--teal);
+}
+.nav-btn.outline:hover { background: var(--teal); color: white; }
+.nav-btn.solid {
+  background: var(--teal);
+  color: white;
+}
+.nav-btn.solid:hover { background: var(--teal-dark); }
+.nav-btn.ghost {
+  background: transparent; color: var(--muted);
+}
+.nav-btn.ghost:hover { color: var(--navy); }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.75rem 1.75rem;
+  border-radius: 999px; border: none; cursor: pointer;
+  font-family: var(--font-body); font-weight: 600; font-size: 1rem;
+  transition: all 0.2s;
+}
+.btn-primary { background: var(--teal); color: white; }
+.btn-primary:hover { background: var(--teal-dark); transform: translateY(-1px); box-shadow: var(--shadow); }
+.btn-secondary { background: white; color: var(--teal); border: 2px solid var(--teal); }
+.btn-secondary:hover { background: var(--teal); color: white; }
+.btn-rose { background: var(--rose); color: white; }
+.btn-rose:hover { background: #e11d48; }
+
+/* ── Cards ── */
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+}
+
+/* ── Forms ── */
+.form-group { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1.25rem; }
+.form-group label { font-size: 0.85rem; font-weight: 600; color: var(--slate); }
+.form-group input, .form-group select {
+  padding: 0.7rem 1rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-family: var(--font-body); font-size: 0.95rem;
+  transition: border-color 0.2s;
+  background: white;
+}
+.form-group input:focus, .form-group select:focus {
+  outline: none; border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(13,148,136,0.1);
+}
+
+/* ── Risk Badge ── */
+.risk-badge {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.3rem 0.9rem; border-radius: 999px;
+  font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.risk-low    { background: #d1fae5; color: #065f46; }
+.risk-medium { background: #fef3c7; color: #92400e; }
+.risk-high   { background: #fee2e2; color: #991b1b; }
+
+/* ── Section headings ── */
+.section-tag {
+  display: inline-block;
+  padding: 0.25rem 0.9rem; border-radius: 999px;
+  background: #ccfbf1; color: var(--teal-dark);
+  font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+.section-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 900; line-height: 1.15;
+  color: var(--navy);
+}
+.section-sub {
+  font-size: 1.05rem; color: var(--muted); line-height: 1.7;
+  max-width: 560px;
+}
+
+/* ── Grid helpers ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.25rem; }
+
+@media (max-width: 768px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .nav { padding: 1rem 1.25rem; }
+}
+
+/* ── Form validation ─────────────────────────── */
+.input-error {
+  border-color: #fca5a5 !important;
+  background: #fff5f5 !important;
+}
+.input-error:focus {
+  border-color: #f87171 !important;
+  box-shadow: 0 0 0 3px rgba(239,68,68,.12) !important;
+}
+.field-error {
+  font-size: .75rem;
+  color: #dc2626;
+  font-weight: 500;
+  margin-top: .15rem;
+}
+
+/* ── Doctor overview stat cards ─────────────── */
+.dsc { transition: transform .2s, box-shadow .2s; }
+.dsc:hover { transform: translateY(-3px); box-shadow: var(--sh-lg); }
+.dsc-val {
+  font-family: var(--font-d);
+  font-size: 2rem; font-weight: 900; margin: .25rem 0;
+}

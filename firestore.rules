@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isApprovedAccessor(patientUid) {
+      return isSignedIn() && (
+        request.auth.uid in get(/databases/$(database)/documents/users/$(patientUid)).data.approvedAccess ||
+        get(/databases/$(database)/documents/users/$(patientUid)).data.assignedDoctorId == request.auth.uid
+      );
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (
+        request.auth.uid == userId ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['approvedAccess', 'assignedPatients', 'assignedDoctorId'])
+      );
+      allow delete: if false;
+    }
+
+    // Assessments
+    match /assessments/{assessmentId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isApprovedAccessor(resource.data.userId)
+      );
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Voice Results
+    match /voiceResults/{voiceId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isApprovedAccessor(resource.data.userId)
+      );
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Kick Counter
+    match /kickCounter/{entryId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isApprovedAccessor(resource.data.userId)
+      );
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Access Requests
+    match /accessRequests/{requestId} {
+      allow read: if isSignedIn() && (
+        resource.data.fromUid == request.auth.uid ||
+        resource.data.toUid == request.auth.uid
+      );
+      allow create: if isSignedIn() && request.resource.data.fromUid == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.toUid == request.auth.uid ||
+        resource.data.fromUid == request.auth.uid
+      );
+      allow delete: if isSignedIn() && resource.data.toUid == request.auth.uid;
+    }
+  }
+}

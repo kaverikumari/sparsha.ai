@@ -1,0 +1,59 @@
+.profile-wrap {
+  min-height: 100vh;
+  background: var(--surface);
+}
+.profile-header {
+  padding: 2rem 5vw 1rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.back-link {
+  background: none; border: none; cursor: pointer;
+  color: var(--teal); font-family: var(--font-b);
+  font-size: .88rem; font-weight: 600; padding: 0;
+  transition: opacity .2s;
+}
+.back-link:hover { opacity: .7; }
+
+.profile-body {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 1.5rem;
+  padding: 0 5vw 3rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+/* avatar card */
+.avatar-card {
+  text-align: center;
+  position: sticky;
+  top: 80px;
+}
+.avatar-circle {
+  width: 80px; height: 80px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal), var(--rose));
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-d); font-size: 1.8rem; font-weight: 900;
+  margin: 0 auto 1rem;
+}
+.avatar-name  { font-weight: 700; font-size: 1.05rem; margin-bottom: .25rem; }
+.avatar-role  { font-size: .82rem; color: var(--teal); font-weight: 600; margin-bottom: .25rem; }
+.avatar-email { font-size: .78rem; color: var(--muted); word-break: break-all; }
+
+.profile-form-card { }
+
+.pf-section-title {
+  font-size: .78rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--muted);
+  margin-bottom: .85rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+@media (max-width: 700px) {
+  .profile-body { grid-template-columns: 1fr; }
+  .avatar-card  { position: static; }
+}

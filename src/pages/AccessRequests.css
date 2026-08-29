@@ -1,0 +1,37 @@
+.ar-layout { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.ar-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0.15rem 0.5rem; border-radius: var(--radius-full);
+  background: var(--teal); color: white;
+  font-size: .72rem; font-weight: 700; margin-left: .5rem;
+}
+
+.ar-empty { color: var(--muted); font-size: .88rem; padding: 1.5rem 0; text-align: center; }
+
+.ar-request-card {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.25rem; border-radius: var(--radius);
+  border: 1px solid var(--border); margin-bottom: .75rem;
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+.ar-req-info { display: flex; align-items: center; gap: 1rem; }
+.ar-req-icon { 
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--slate-100);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; flex-shrink: 0;
+}
+.ar-req-name { font-weight: 700; font-size: .95rem; color: var(--navy); }
+.ar-req-role { font-size: .78rem; color: var(--muted); margin-top: .15rem; }
+.ar-req-actions { display: flex; gap: .5rem; }
+
+.ar-revoke-btn {
+  background: none; border: 1px solid #fecaca;
+  color: #dc2626; border-radius: 8px;
+  padding: .35rem .85rem; font-family: var(--font-body);
+  font-size: .78rem; font-weight: 600; cursor: pointer;
+  transition: all .15s ease;
+}
+.ar-revoke-btn:hover { background: #fef2f2; border-color: #fca5a5; }
