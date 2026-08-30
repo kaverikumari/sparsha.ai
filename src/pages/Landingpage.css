@@ -178,3 +178,108 @@
   .steps-grid { grid-template-columns: 1fr; }
   .stats-strip { grid-template-columns: 1fr 1fr; }
 }
+/* =========================================================
+   SPARSHA.AI — PROFESSIONAL LOGIN BUTTONS
+   ========================================================= */
+
+/* Google Sign-in */
+.google-btn {
+  width: 100%;
+  min-height: 46px;
+  padding: 0.75rem 1rem;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+
+  background: #ffffff;
+  color: #1f2937;
+
+  border: 1px solid #d9e2e7;
+  border-radius: 10px;
+
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.google-btn:hover {
+  background: #f8fafc;
+  border-color: #b9c7cf;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.09);
+}
+
+.google-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06);
+}
+
+.google-btn:focus-visible {
+  outline: 3px solid rgba(13, 148, 136, 0.18);
+  outline-offset: 2px;
+}
+
+.google-btn svg {
+  flex-shrink: 0;
+}
+
+
+/* Demo button */
+.demo-btn {
+  width: 100%;
+  min-height: 46px;
+  padding: 0.75rem 1rem;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  background: var(--teal-bg);
+  color: var(--teal-dark);
+
+  border: 1px solid var(--teal-border);
+  border-radius: 10px;
+
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.demo-btn:hover {
+  background: #dff7f3;
+  border-color: var(--teal);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.12);
+}
+
+.demo-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.demo-btn:focus-visible {
+  outline: 3px solid rgba(13, 148, 136, 0.18);
+  outline-offset: 2px;
+}
+
