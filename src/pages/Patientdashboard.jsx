@@ -80,175 +80,579 @@ function RiskGauge({ value, label }) {
 }
 
 // ── Voice Test Tab ─────────────────────────────────────────────────────────
-function VoiceTestTab({ demo, user, voiceResult, setVoiceResult, setVoiceHistory, saveVoiceResult: saveFn, inline }) {
+// ── Voice Test Tab ─────────────────────────────────────────────────────────
+function VoiceTestTab({
+  demo,
+  user,
+  voiceResult,
+  setVoiceResult,
+  setVoiceHistory,
+  saveVoiceResult: saveFn,
+  inline
+}) {
   const toast = useToast();
-  const [mode, setMode]         = useState("idle");
-  const [seconds, setSeconds]   = useState(0);
+
+  const [mode, setMode] = useState("idle");
+  const [seconds, setSeconds] = useState(0);
   const [audioURL, setAudioURL] = useState(null);
   const [audioBlob, setAudioBlob] = useState(null);
-  const [error, setError]       = useState("");
-  const [tab, setTab]           = useState("record");
+  const [error, setError] = useState("");
+  const [tab, setTab] = useState("record");
 
-  const mediaRef  = useRef(null);
+  const mediaRef = useRef(null);
   const chunksRef = useRef([]);
-  const timerRef  = useRef(null);
+  const timerRef = useRef(null);
   const streamRef = useRef(null);
 
-  useEffect(() => () => {
-    clearInterval(timerRef.current);
-    streamRef.current?.getTracks().forEach(t => t.stop());
-  }, []);
+  useEffect(() => {
+    return () => {
+      clearInterval(timerRef.current);
+
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+
+      if (audioURL) {
+        URL.revokeObjectURL(audioURL);
+      }
+    };
+  }, [audioURL]);
 
   async function startRecording() {
-    setError(""); setAudioURL(null); setAudioBlob(null); chunksRef.current = [];
+    setError("");
+    setAudioURL(null);
+    setAudioBlob(null);
+    setSeconds(0);
+    chunksRef.current = [];
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError("Your browser does not support microphone recording.");
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
+
       streamRef.current = stream;
+
       const mr = new MediaRecorder(stream);
+
       mediaRef.current = mr;
-      mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      mr.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        setAudioBlob(blob); setAudioURL(URL.createObjectURL(blob));
-        stream.getTracks().forEach(t => t.stop());
+
+      mr.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
       };
-      mr.start(100); setMode("recording"); setSeconds(0);
-      timerRef.current = setInterval(() => setSeconds(s => {
-        if (s >= 60) { stopRecording(); return s; }
-        return s + 1;
-      }), 1000);
-    } catch (e) {
-      setError("Microphone access denied. Allow mic access in your browser and try again.");
+
+      mr.onstop = () => {
+        const blob = new Blob(chunksRef.current, {
+          type: "audio/webm",
+        });
+
+        setAudioBlob(blob);
+        setAudioURL(URL.createObjectURL(blob));
+
+        stream.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      };
+
+      mr.onerror = () => {
+        setError("Something went wrong while recording. Please try again.");
+        setMode("idle");
+      };
+
+      mr.start(100);
+
+      setMode("recording");
+      setSeconds(0);
+
+      timerRef.current = setInterval(() => {
+        setSeconds((current) => {
+          if (current >= 60) {
+            clearInterval(timerRef.current);
+
+            if (mediaRef.current?.state === "recording") {
+              mediaRef.current.stop();
+            }
+
+            setMode("idle");
+
+            return 60;
+          }
+
+          return current + 1;
+        });
+      }, 1000);
+
+    } catch (err) {
+      console.error("Microphone error:", err);
+
+      setError(
+        "Microphone access denied. Please allow microphone access in your browser and try again."
+      );
+
+      setMode("idle");
     }
   }
 
   function stopRecording() {
     clearInterval(timerRef.current);
-    mediaRef.current?.stop();
+
+    if (
+      mediaRef.current &&
+      mediaRef.current.state === "recording"
+    ) {
+      mediaRef.current.stop();
+    }
+
     setMode("idle");
   }
 
-  async function handleFileChange(e) {
-    const file = e.target.files[0]; if (!file) return;
-    if (file.size > 15 * 1024 * 1024) { setError("File too large. Max 15MB."); return; }
-    setAudioURL(URL.createObjectURL(file)); setAudioBlob(file);
+  function handleFileChange(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    setError("");
+
+    if (file.size > 15 * 1024 * 1024) {
+      setError("File too large. Maximum size is 15MB.");
+      return;
+    }
+
+    setAudioBlob(file);
+    setAudioURL(URL.createObjectURL(file));
+    setMode("idle");
   }
 
   async function runAnalysis(blob) {
+    if (!blob) {
+      setError("Please record or upload an audio file first.");
+      return;
+    }
+
     setMode("processing");
-    await new Promise(r => setTimeout(r, 2000));
-    const prob = Math.round(20 + Math.random() * 55);
-    const newResult = { prob };
-    setVoiceResult(newResult); setMode("done");
-    if (!demo && user) {
-      try {
-        const docId = await saveFn(user.uid, newResult);
-        setVoiceHistory(prev => [{ id: docId, result: newResult, createdAt: new Date() }, ...prev]);
-        toast.success("Voice test saved to your history!");
-      } catch (e) { toast.error("Voice result saved locally only."); }
+    setError("");
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const prob = Math.round(20 + Math.random() * 55);
+
+      const newResult = {
+        prob,
+      };
+
+      setVoiceResult(newResult);
+      setMode("done");
+
+      if (!demo && user) {
+        try {
+          const docId = await saveFn(user.uid, newResult);
+
+          setVoiceHistory((previous) => [
+            {
+              id: docId,
+              result: newResult,
+              createdAt: new Date(),
+            },
+            ...previous,
+          ]);
+
+          toast.success("Voice test saved to your history!");
+        } catch (err) {
+          console.error("Voice save error:", err);
+          toast.error("Voice result saved locally only.");
+        }
+      }
+
+    } catch (err) {
+      console.error("Voice analysis error:", err);
+
+      setError("Unable to analyse the audio. Please try again.");
+      setMode("idle");
     }
   }
 
-  function reset() { setMode("idle"); setAudioURL(null); setAudioBlob(null); setSeconds(0); setError(""); }
-  const fmt = s => `${String(Math.floor(s/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+  function reset() {
+    clearInterval(timerRef.current);
+
+    if (
+      mediaRef.current &&
+      mediaRef.current.state === "recording"
+    ) {
+      mediaRef.current.stop();
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    if (audioURL) {
+      URL.revokeObjectURL(audioURL);
+    }
+
+    setMode("idle");
+    setAudioURL(null);
+    setAudioBlob(null);
+    setSeconds(0);
+    setError("");
+    chunksRef.current = [];
+  }
+
+  const fmt = (secondsValue) =>
+    `${String(Math.floor(secondsValue / 60)).padStart(2, "0")}:${String(
+      secondsValue % 60
+    ).padStart(2, "0")}`;
 
   const inner = (
-    <div className="card voice-card" style={{maxWidth: inline ? "100%" : 620, marginTop: inline ? "1rem" : 0}}>
+    <div
+      className="card voice-card"
+      style={{
+        maxWidth: inline ? "100%" : 620,
+        marginTop: inline ? "1rem" : 0,
+      }}
+    >
+
+      {/* Voice mode tabs */}
       {mode !== "processing" && mode !== "done" && (
         <div className="vtab-row">
-          <button className={`vtab ${tab==="record"?"act":""}`} onClick={() => { setTab("record"); reset(); }}>🎙️ Record Now</button>
-          <button className={`vtab ${tab==="upload"?"act":""}`} onClick={() => { setTab("upload"); reset(); }}>📁 Upload File</button>
+
+          <button
+            type="button"
+            className={`vtab ${tab === "record" ? "act" : ""}`}
+            onClick={() => {
+              setTab("record");
+              reset();
+            }}
+          >
+            🎙️ Record Now
+          </button>
+
+          <button
+            type="button"
+            className={`vtab ${tab === "upload" ? "act" : ""}`}
+            onClick={() => {
+              setTab("upload");
+              reset();
+            }}
+          >
+            📁 Upload File
+          </button>
+
         </div>
-        )}
-        {mode !== "processing" && mode !== "done" && (
-          <div className="passage-box">
-            {PASSAGE.split("\n").map((line, i) => (
-              <p key={i} style={{margin: i===2?".5rem 0 0":0, fontStyle:i===2?"italic":"normal", fontWeight:i===2?500:400}}>{line}</p>
-            ))}
-          </div>
-        )}
-        {tab === "record" && mode !== "processing" && mode !== "done" && (
+      )}
+
+      {/* Passage */}
+      {mode !== "processing" && mode !== "done" && (
+        <div className="passage-box">
+          {PASSAGE.split("\n").map((line, index) => (
+            <p
+              key={index}
+              style={{
+                margin: index === 2 ? ".5rem 0 0" : 0,
+                fontStyle: index === 2 ? "italic" : "normal",
+                fontWeight: index === 2 ? 500 : 400,
+              }}
+            >
+              {line}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {/* RECORD TAB */}
+      {tab === "record" &&
+        mode !== "processing" &&
+        mode !== "done" && (
           <div className="record-zone">
-            {error && <div className="auth-error" style={{marginBottom:"1rem"}}>⚠️ {error}</div>}
-            <div className={`waveform ${mode==="recording"?"active":""}`}>
-              {Array.from({length:20}).map((_,i) => <div key={i} className="wbar" style={{animationDelay:`${i*0.08}s`}} />)}
+
+            {error && (
+              <div
+                className="auth-error"
+                style={{ marginBottom: "1rem" }}
+              >
+                ⚠️ {error}
+              </div>
+            )}
+
+            <div
+              className={`waveform ${
+                mode === "recording" ? "active" : ""
+              }`}
+            >
+              {Array.from({ length: 20 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="wbar"
+                  style={{
+                    animationDelay: `${index * 0.08}s`,
+                  }}
+                />
+              ))}
             </div>
-            <div className="rec-timer">{fmt(seconds)}</div>
+
+            <div className="rec-timer">
+              {fmt(seconds)}
+            </div>
+
+            {/* START */}
             {mode === "idle" && !audioURL && (
-              <button className="btn btn-primary rec-btn" onClick={startRecording}>⏺ Start Recording</button>
+              <button
+                type="button"
+                className="btn btn-primary rec-btn"
+                onClick={startRecording}
+              >
+                ⏺ Start Recording
+              </button>
             )}
+
+            {/* STOP */}
             {mode === "recording" && (
-              <button className="btn btn-rose rec-btn" onClick={stopRecording}>⏹ Stop Recording</button>
+              <button
+                type="button"
+                className="btn btn-rose rec-btn"
+                onClick={stopRecording}
+              >
+                ⏹ Stop Recording
+              </button>
             )}
+
+            {/* PLAYBACK */}
             {audioURL && mode === "idle" && (
               <div className="playback-zone">
-                <audio controls src={audioURL} style={{width:"100%",marginBottom:"1rem"}} />
-                <div style={{display:"flex",gap:".75rem",justifyContent:"center"}}>
-                  <button className="btn btn-secondary" onClick={reset}>🔄 Re-record</button>
-                  <button className="btn btn-primary" onClick={() => runAnalysis(audioBlob)}>🤖 Analyse →</button>
+
+                <audio
+                  controls
+                  src={audioURL}
+                  style={{
+                    width: "100%",
+                    marginBottom: "1rem",
+                  }}
+                />
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: ".75rem",
+                    justifyContent: "center",
+                  }}
+                >
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={reset}
+                  >
+                    🔄 Re-record
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => runAnalysis(audioBlob)}
+                  >
+                    🤖 Analyse →
+                  </button>
+
                 </div>
               </div>
             )}
+
           </div>
         )}
-        {tab === "upload" && mode !== "processing" && mode !== "done" && (
+
+      {/* UPLOAD TAB */}
+      {tab === "upload" &&
+        mode !== "processing" &&
+        mode !== "done" && (
           <div className="upload-zone">
+
             {!audioURL ? (
               <>
-                <div className="vuz-icon">📁</div>
-                <p style={{color:"var(--muted)"}}>Drag &amp; drop your audio file, or</p>
-                <label className="btn btn-primary" style={{cursor:"pointer"}}>
+                <div className="vuz-icon">
+                  📁
+                </div>
+
+                <p style={{ color: "var(--muted)" }}>
+                  Drag &amp; drop your audio file, or
+                </p>
+
+                <label
+                  className="btn btn-primary"
+                  style={{ cursor: "pointer" }}
+                >
                   Choose File
-                  <input type="file" accept="audio/*" style={{display:"none"}} onChange={handleFileChange} />
+
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    style={{ display: "none" }}
+                    onChange={handleFileChange}
+                  />
                 </label>
-                <p style={{fontSize:".78rem",color:"var(--muted)"}}>Supported: .wav · .mp3 · .m4a · Max 15MB</p>
+
+                <p
+                  style={{
+                    fontSize: ".78rem",
+                    color: "var(--muted)",
+                  }}
+                >
+                  Supported: .wav · .mp3 · .m4a · Max 15MB
+                </p>
               </>
             ) : (
               <div className="playback-zone">
-                <audio controls src={audioURL} style={{width:"100%",marginBottom:"1rem"}} />
-                <div style={{display:"flex",gap:".75rem",justifyContent:"center"}}>
-                  <button className="btn btn-secondary" onClick={reset}>🔄 Different File</button>
-                  <button className="btn btn-primary" onClick={() => runAnalysis(audioBlob)}>🤖 Analyse →</button>
+
+                <audio
+                  controls
+                  src={audioURL}
+                  style={{
+                    width: "100%",
+                    marginBottom: "1rem",
+                  }}
+                />
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: ".75rem",
+                    justifyContent: "center",
+                  }}
+                >
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={reset}
+                  >
+                    🔄 Different File
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={() => runAnalysis(audioBlob)}
+                  >
+                    🤖 Analyse →
+                  </button>
+
                 </div>
               </div>
             )}
+
           </div>
         )}
-        {mode === "processing" && (
-          <div className="voice-processing" style={{flexDirection:"column",gap:"1rem",padding:"2rem 0"}}>
-            <div className="spinner" style={{width:40,height:40}} />
-            <div style={{textAlign:"center"}}>
-              <div style={{fontWeight:600,color:"var(--teal-d)",marginBottom:".5rem"}}>Analysing audio…</div>
-              <div style={{fontSize:".82rem",color:"var(--muted)"}}>MFCC Extraction → Spectrogram → CNN Classification</div>
+
+      {/* PROCESSING */}
+      {mode === "processing" && (
+        <div
+          className="voice-processing"
+          style={{
+            flexDirection: "column",
+            gap: "1rem",
+            padding: "2rem 0",
+          }}
+        >
+          <div
+            className="spinner"
+            style={{
+              width: 40,
+              height: 40,
+            }}
+          />
+
+          <div style={{ textAlign: "center" }}>
+
+            <div
+              style={{
+                fontWeight: 600,
+                color: "var(--teal-d)",
+                marginBottom: ".5rem",
+              }}
+            >
+              Analysing audio…
             </div>
-          </div>
-        )}
-        {mode === "done" && voiceResult && (
-          <div className="voice-result" style={{padding:"1rem 0"}}>
-            <h3 style={{marginBottom:"1rem"}}>Analysis Complete ✅</h3>
-            <RiskGauge value={voiceResult.prob} label="Dysarthria Risk" />
-            <div className="vr-note" style={{marginTop:"1rem"}}>
-              Pipeline: Audio → MFCC Extraction → Spectrogram → CNN → Risk Probability
+
+            <div
+              style={{
+                fontSize: ".82rem",
+                color: "var(--muted)",
+              }}
+            >
+              MFCC Extraction → Spectrogram → CNN Classification
             </div>
-            <button className="btn btn-secondary" style={{marginTop:"1.25rem"}} onClick={reset}>🔄 Test Again</button>
+
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* RESULT */}
+      {mode === "done" && voiceResult && (
+        <div
+          className="voice-result"
+          style={{ padding: "1rem 0" }}
+        >
+
+          <h3 style={{ marginBottom: "1rem" }}>
+            Analysis Complete ✅
+          </h3>
+
+          <RiskGauge
+            value={voiceResult.prob}
+            label="Dysarthria Risk"
+          />
+
+          <div
+            className="vr-note"
+            style={{ marginTop: "1rem" }}
+          >
+            Pipeline: Audio → MFCC Extraction → Spectrogram → CNN → Risk Probability
+          </div>
+
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ marginTop: "1.25rem" }}
+            onClick={reset}
+          >
+            🔄 Test Again
+          </button>
+
+        </div>
+      )}
+
+    </div>
   );
 
-  if (inline) return inner;
+  if (inline) {
+    return inner;
+  }
 
   return (
     <div className="dash-section">
-      <h1 className="section-title">Dysarthria Voice Test</h1>
-      <p className="section-sub" style={{marginBottom:"1.75rem"}}>
-        Record or upload a voice sample. Our CNN analyses speech features for dysarthria risk.
+
+      <h1 className="section-title">
+        Dysarthria Voice Test
+      </h1>
+
+      <p
+        className="section-sub"
+        style={{ marginBottom: "1.75rem" }}
+      >
+        Record or upload a voice sample. Our CNN analyses speech
+        features for dysarthria risk.
       </p>
+
       {inner}
+
     </div>
   );
 }
-
 // ── Main Patient Dashboard ─────────────────────────────────────────────────
 export default function PatientDashboard({ onLogout, demo }) {
   const { user, profile, logout } = useAuth();
