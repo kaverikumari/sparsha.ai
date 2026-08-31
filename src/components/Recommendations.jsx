@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import "./Recommendations.css";
@@ -350,24 +350,30 @@ const DOCTOR_DIRECTORY = [
 
 // Major city reference center coordinates for baseline distance calculation
 const CITY_CENTERS = {
-  "Kolkata":   { lat: 22.5726, lng: 88.3639, state: "West Bengal" },
-  "Bengaluru": { lat: 12.9716, lng: 77.5946, state: "Karnataka" },
-  "Mumbai":    { lat: 19.0760, lng: 72.8777, state: "Maharashtra" },
+  Kolkata: { lat: 22.5726, lng: 88.3639, state: "West Bengal" },
+  Bengaluru: { lat: 12.9716, lng: 77.5946, state: "Karnataka" },
+  Mumbai: { lat: 19.0760, lng: 72.8777, state: "Maharashtra" },
   "New Delhi": { lat: 28.6139, lng: 77.2090, state: "Delhi" },
-  "Hyderabad": { lat: 17.3850, lng: 78.4867, state: "Telangana" },
-  "Chennai":   { lat: 13.0827, lng: 80.2707, state: "Tamil Nadu" },
+  Hyderabad: { lat: 17.3850, lng: 78.4867, state: "Telangana" },
+  Chennai: { lat: 13.0827, lng: 80.2707, state: "Tamil Nadu" }
 };
 
 // Haversine distance calculator in KM
 function calcDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Earth radius in km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const R = 6371;
+
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
   return (R * c).toFixed(1);
 }
 
@@ -377,15 +383,19 @@ export default function Recommendations({ result, formData, inline = false }) {
 
   const [activeTab, setActiveTab] = useState("exercise");
   const [userLocation, setUserLocation] = useState(null);
-  const [locationStatus, setLocationStatus] = useState("idle"); // idle, locating, located, error
-  
-  // Default to profile city if available, otherwise default to Kolkata for instant local suggestions
-  const initialCity = profile?.city && profile.city.trim() ? profile.city.trim() : "Kolkata";
+  const [locationStatus, setLocationStatus] = useState("idle");
+
+  const initialCity =
+    profile?.city && profile.city.trim()
+      ? profile.city.trim()
+      : "Kolkata";
+
   const [selectedCity, setSelectedCity] = useState(initialCity);
   const [searchQuery, setSearchQuery] = useState("");
 
   const gdmScore = result?.gdm ?? 0;
-  const riskTier = gdmScore < 30 ? "low" : gdmScore < 60 ? "moderate" : "high";
+  const riskTier =
+    gdmScore < 30 ? "low" : gdmScore < 60 ? "moderate" : "high";
 
   // Request browser geolocation
   function detectLocation() {
@@ -394,33 +404,47 @@ export default function Recommendations({ result, formData, inline = false }) {
       setLocationStatus("error");
       return;
     }
+
     setLocationStatus("locating");
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const coords = {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude
         };
+
         setUserLocation(coords);
         setLocationStatus("located");
 
-        // Check if user is closest to Kolkata or another city
         let closestCity = "Kolkata";
         let minCityDist = 999999;
+
         Object.entries(CITY_CENTERS).forEach(([cityName, cCoords]) => {
-          const d = parseFloat(calcDistance(coords.lat, coords.lng, cCoords.lat, cCoords.lng));
+          const d = parseFloat(
+            calcDistance(
+              coords.lat,
+              coords.lng,
+              cCoords.lat,
+              cCoords.lng
+            )
+          );
+
           if (d < minCityDist) {
             minCityDist = d;
             closestCity = cityName;
           }
         });
 
-        // If user is within 150 km of that city, auto-set selectedCity
         if (minCityDist < 150) {
           setSelectedCity(closestCity);
-          toast.success(`📍 Located near ${closestCity}! Showing nearest clinics first.`);
+          toast.success(
+            `Located near ${closestCity}! Showing nearest clinics first.`
+          );
         } else {
-          toast.success("Location detected! Sorted by exact distance.");
+          toast.success(
+            "Location detected! Sorted by exact distance."
+          );
         }
       },
       (err) => {
@@ -428,135 +452,250 @@ export default function Recommendations({ result, formData, inline = false }) {
         setLocationStatus("error");
         toast.info("Using city filter for location matching.");
       },
-      { timeout: 10000, maximumAge: 60000 }
+      {
+        timeout: 10000,
+        maximumAge: 60000
+      }
     );
   }
 
-  // Reference coordinates for distance calculation: either exact GPS or selected city center
-  const activeRefCoords = userLocation || (selectedCity !== "All Cities" && CITY_CENTERS[selectedCity] ? CITY_CENTERS[selectedCity] : null);
+  const activeRefCoords =
+    userLocation ||
+    (selectedCity !== "All Cities" &&
+    CITY_CENTERS[selectedCity]
+      ? CITY_CENTERS[selectedCity]
+      : null);
 
   // Filter & sort doctors
-  const filteredDoctors = DOCTOR_DIRECTORY.map(doc => {
+  const filteredDoctors = DOCTOR_DIRECTORY.map((doc) => {
     let dist = null;
+
     if (activeRefCoords) {
-      dist = calcDistance(activeRefCoords.lat, activeRefCoords.lng, doc.lat, doc.lng);
+      dist = calcDistance(
+        activeRefCoords.lat,
+        activeRefCoords.lng,
+        doc.lat,
+        doc.lng
+      );
     }
-    return { ...doc, distanceKm: dist ? parseFloat(dist) : null };
-  }).filter(doc => {
-    if (selectedCity !== "All Cities" && selectedCity !== "") {
-      const matchCity = doc.city.toLowerCase().includes(selectedCity.toLowerCase());
-      const matchState = doc.state.toLowerCase().includes(selectedCity.toLowerCase());
-      if (!matchCity && !matchState) return false;
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchText = doc.name.toLowerCase().includes(q) ||
-                        doc.hospital.toLowerCase().includes(q) ||
-                        doc.speciality.toLowerCase().includes(q) ||
-                        doc.address.toLowerCase().includes(q) ||
-                        doc.city.toLowerCase().includes(q);
-      if (!matchText) return false;
-    }
-    return true;
-  }).sort((a, b) => {
-    // If distance is available, sort nearest first
-    if (a.distanceKm !== null && b.distanceKm !== null) {
-      return a.distanceKm - b.distanceKm;
-    }
-    // If city is matched, prioritize recommended tier
-    const aRec = a.recommendedFor.includes(riskTier) ? 1 : 0;
-    const bRec = b.recommendedFor.includes(riskTier) ? 1 : 0;
-    return bRec - aRec;
-  });
+
+    return {
+      ...doc,
+      distanceKm: dist ? parseFloat(dist) : null
+    };
+  })
+    .filter((doc) => {
+      if (selectedCity !== "All Cities" && selectedCity !== "") {
+        const matchCity = doc.city
+          .toLowerCase()
+          .includes(selectedCity.toLowerCase());
+
+        const matchState = doc.state
+          .toLowerCase()
+          .includes(selectedCity.toLowerCase());
+
+        if (!matchCity && !matchState) {
+          return false;
+        }
+      }
+
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+
+        const matchText =
+          doc.name.toLowerCase().includes(q) ||
+          doc.hospital.toLowerCase().includes(q) ||
+          doc.speciality.toLowerCase().includes(q) ||
+          doc.address.toLowerCase().includes(q) ||
+          doc.city.toLowerCase().includes(q);
+
+        if (!matchText) {
+          return false;
+        }
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      if (a.distanceKm !== null && b.distanceKm !== null) {
+        return a.distanceKm - b.distanceKm;
+      }
+
+      const aRec = a.recommendedFor.includes(riskTier) ? 1 : 0;
+      const bRec = b.recommendedFor.includes(riskTier) ? 1 : 0;
+
+      return bRec - aRec;
+    });
 
   return (
     <div className="recs-container">
-      {/* ── Risk Summary Header ── */}
+
+      {/* Risk Summary Header */}
       <div className={`recs-risk-summary ${riskTier}`}>
         <div>
           <div className="recs-risk-title">
-            {riskTier === "low" && "🟢 Low GDM Risk Plan (Preventive & Active)"}
-            {riskTier === "moderate" && "🟡 Moderate GDM Risk Plan (Glycemic Control & Structured Monitoring)"}
-            {riskTier === "high" && "🔴 High GDM Risk Protocol (Specialist Care & Medical Supervision)"}
+            {riskTier === "low" &&
+              "Low GDM Risk Plan (Preventive & Active)"}
+
+            {riskTier === "moderate" &&
+              "Moderate GDM Risk Plan (Glycemic Control & Structured Monitoring)"}
+
+            {riskTier === "high" &&
+              "High GDM Risk Protocol (Specialist Care & Medical Supervision)"}
           </div>
+
           <div className="recs-risk-desc">
-            Tailored exercise, diet, and clinical specialist matching for your {gdmScore}% risk score.
+            Tailored exercise, diet, and clinical specialist matching
+            for your {gdmScore}% risk score.
           </div>
         </div>
+
         <span className={`risk-badge risk-${riskTier}`}>
           {riskTier.toUpperCase()} RISK TIER
         </span>
       </div>
 
-      {/* ── Sub Navigation Tabs ── */}
+      {/* Sub Navigation Tabs */}
       <div className="recs-nav">
         <button
-          className={`recs-nav-btn ${activeTab === "exercise" ? "active" : ""}`}
+          className={`recs-nav-btn ${
+            activeTab === "exercise" ? "active" : ""
+          }`}
           onClick={() => setActiveTab("exercise")}
         >
-          🏃‍♀️ Exercise &amp; Activity
-          <span className="recs-badge" style={{background: "#e0f2fe", color: "#0369a1"}}>
+          Exercise &amp; Activity
+
+          <span
+            className="recs-badge"
+            style={{
+              background: "#e0f2fe",
+              color: "#0369a1"
+            }}
+          >
             {riskTier === "high" ? "Gentle Only" : "Daily Active"}
           </span>
         </button>
+
         <button
-          className={`recs-nav-btn ${activeTab === "diet" ? "active" : ""}`}
+          className={`recs-nav-btn ${
+            activeTab === "diet" ? "active" : ""
+          }`}
           onClick={() => setActiveTab("diet")}
         >
-          🥗 Nutrition &amp; Diet
-          <span className="recs-badge" style={{background: "#d1fae5", color: "#065f46"}}>
+          Nutrition &amp; Diet
+
+          <span
+            className="recs-badge"
+            style={{
+              background: "#d1fae5",
+              color: "#065f46"
+            }}
+          >
             Low GI
           </span>
         </button>
+
         <button
-          className={`recs-nav-btn ${activeTab === "doctor" ? "active" : ""}`}
+          className={`recs-nav-btn ${
+            activeTab === "doctor" ? "active" : ""
+          }`}
           onClick={() => setActiveTab("doctor")}
         >
-          🩺 Doctor &amp; Clinic Match
-          <span className="recs-badge" style={{background: "#fef3c7", color: "#92400e"}}>
+          Doctor &amp; Clinic Match
+
+          <span
+            className="recs-badge"
+            style={{
+              background: "#fef3c7",
+              color: "#92400e"
+            }}
+          >
             {filteredDoctors.length} Specialists
           </span>
         </button>
       </div>
 
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* TAB 1: EXERCISE & PHYSICAL ACTIVITY                       */}
-      {/* ────────────────────────────────────────────────────────── */}
+      {/* EXERCISE & PHYSICAL ACTIVITY */}
       {activeTab === "exercise" && (
         <div>
-          <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",flexWrap:"wrap",gap:".5rem",marginBottom:".75rem"}}>
-            <h3 style={{margin:0,color:"var(--navy)"}}>Personalized Activity Regimen</h3>
-            <span style={{fontSize:".85rem",color:"var(--muted)"}}>
-              Target: {riskTier === "low" ? "150 min/week" : riskTier === "moderate" ? "20-30 min post-meal" : "Supervised gentle stretches"}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: ".5rem",
+              marginBottom: ".75rem"
+            }}
+          >
+            <h3 style={{ margin: 0, color: "var(--navy)" }}>
+              Personalized Activity Regimen
+            </h3>
+
+            <span
+              style={{
+                fontSize: ".85rem",
+                color: "var(--muted)"
+              }}
+            >
+              Target:{" "}
+              {riskTier === "low"
+                ? "150 min/week"
+                : riskTier === "moderate"
+                ? "20-30 min post-meal"
+                : "Supervised gentle stretches"}
             </span>
           </div>
 
           {/* High risk strict warning */}
           {riskTier === "high" && (
-            <div className="red-flag-box" style={{marginBottom:"1.25rem"}}>
+            <div
+              className="red-flag-box"
+              style={{ marginBottom: "1.25rem" }}
+            >
               <div className="red-flag-title">
-                ⚠️ Obstetrician Clearance Mandatory Before Exercise
+                Obstetrician Clearance Mandatory Before Exercise
               </div>
-              <p style={{fontSize:".85rem",lineHeight:1.5}}>
-                Due to elevated glycemic or metabolic indicators, please consult your OB-GYN or Maternal-Fetal Specialist before undertaking new exercise regimens. Stick strictly to slow strolls and diaphragmatic breathing until cleared.
+
+              <p
+                style={{
+                  fontSize: ".85rem",
+                  lineHeight: 1.5
+                }}
+              >
+                Due to elevated glycemic or metabolic indicators,
+                please consult your OB-GYN or Maternal-Fetal Specialist
+                before undertaking new exercise regimens. Stick
+                strictly to slow strolls and diaphragmatic breathing
+                until cleared.
               </p>
             </div>
           )}
 
           <div className="exercise-grid">
+
             {riskTier === "low" && (
               <>
                 <div className="exercise-card">
                   <div className="ex-card-header">
-                    <div className="ex-icon-box">🚶‍♀️</div>
+                    <div className="ex-icon-box">Walk</div>
+
                     <div>
-                      <div className="ex-title">Brisk Walking</div>
-                      <div className="ex-meta">30 Mins · 5 Days / Week</div>
+                      <div className="ex-title">
+                        Brisk Walking
+                      </div>
+
+                      <div className="ex-meta">
+                        30 Mins · 5 Days / Week
+                      </div>
                     </div>
                   </div>
+
                   <div className="ex-desc">
-                    Improves maternal cardiovascular efficiency and insulin sensitivity without stressing joints.
+                    Improves maternal cardiovascular efficiency and
+                    insulin sensitivity without stressing joints.
                   </div>
+
                   <ul className="ex-tips-list">
                     <li>Maintain conversational pace (talk test)</li>
                     <li>Wear well-cushioned supportive footwear</li>
@@ -566,37 +705,67 @@ export default function Recommendations({ result, formData, inline = false }) {
 
                 <div className="exercise-card">
                   <div className="ex-card-header">
-                    <div className="ex-icon-box">🧘‍♀️</div>
+                    <div className="ex-icon-box">Yoga</div>
+
                     <div>
-                      <div className="ex-title">Prenatal Yoga &amp; Pelvic Floor</div>
-                      <div className="ex-meta">20-30 Mins · 3-4 Days / Week</div>
+                      <div className="ex-title">
+                        Prenatal Yoga &amp; Pelvic Floor
+                      </div>
+
+                      <div className="ex-meta">
+                        20-30 Mins · 3-4 Days / Week
+                      </div>
                     </div>
                   </div>
+
                   <div className="ex-desc">
-                    Enhances pelvic flexibility, strengthens perineal muscles (Kegels), and reduces lower back strain.
+                    Enhances pelvic flexibility, strengthens perineal
+                    muscles (Kegels), and reduces lower back strain.
                   </div>
+
                   <ul className="ex-tips-list">
-                    <li>Focus on gentle butterfly pose &amp; cat-cow stretch</li>
-                    <li>Avoid lying flat on your back after week 16</li>
-                    <li>Practice deep diaphragmatic belly breathing</li>
+                    <li>
+                      Focus on gentle butterfly pose &amp; cat-cow
+                      stretch
+                    </li>
+                    <li>
+                      Avoid lying flat on your back after week 16
+                    </li>
+                    <li>
+                      Practice deep diaphragmatic belly breathing
+                    </li>
                   </ul>
                 </div>
 
                 <div className="exercise-card">
                   <div className="ex-card-header">
-                    <div className="ex-icon-box">🏊‍♀️</div>
+                    <div className="ex-icon-box">Swim</div>
+
                     <div>
-                      <div className="ex-title">Swimming &amp; Water Aerobics</div>
-                      <div className="ex-meta">30 Mins · 2-3 Days / Week</div>
+                      <div className="ex-title">
+                        Swimming &amp; Water Aerobics
+                      </div>
+
+                      <div className="ex-meta">
+                        30 Mins · 2-3 Days / Week
+                      </div>
                     </div>
                   </div>
+
                   <div className="ex-desc">
-                    Buoyancy relieves spinal pressure and sciatic nerve compression while delivering a full-body workout.
+                    Buoyancy relieves spinal pressure and sciatic
+                    nerve compression while delivering a full-body
+                    workout.
                   </div>
+
                   <ul className="ex-tips-list">
-                    <li>Swim in moderate temperature pools</li>
+                    <li>
+                      Swim in moderate temperature pools
+                    </li>
                     <li>Avoid hot tubs and saunas</li>
-                    <li>Use gentle breaststroke or flutter kicks</li>
+                    <li>
+                      Use gentle breaststroke or flutter kicks
+                    </li>
                   </ul>
                 </div>
               </>
@@ -604,57 +773,107 @@ export default function Recommendations({ result, formData, inline = false }) {
 
             {riskTier === "moderate" && (
               <>
-                <div className="exercise-card" style={{borderLeft:"4px solid var(--teal)"}}>
+                <div
+                  className="exercise-card"
+                  style={{
+                    borderLeft: "4px solid var(--teal)"
+                  }}
+                >
                   <div className="ex-card-header">
-                    <div className="ex-icon-box">⏱️</div>
+                    <div className="ex-icon-box">Timing</div>
+
                     <div>
-                      <div className="ex-title">Post-Meal Glycemic Walks</div>
-                      <div className="ex-meta">15-20 Mins · Within 30 Mins of Meals</div>
+                      <div className="ex-title">
+                        Post-Meal Glycemic Walks
+                      </div>
+
+                      <div className="ex-meta">
+                        15-20 Mins · Within 30 Mins of Meals
+                      </div>
                     </div>
                   </div>
+
                   <div className="ex-desc">
-                    Clinically proven to blunt postprandial blood glucose spikes by activating GLUT4 transporters in muscles.
+                    Clinically proven to blunt postprandial blood
+                    glucose spikes by activating GLUT4 transporters
+                    in muscles.
                   </div>
+
                   <ul className="ex-tips-list">
-                    <li>Take a light walk after lunch and dinner</li>
+                    <li>
+                      Take a light walk after lunch and dinner
+                    </li>
                     <li>Keep pace relaxed to moderate</li>
-                    <li>Check blood glucose 1 hour post meal to track drop</li>
+                    <li>
+                      Check blood glucose 1 hour post meal to track
+                      drop
+                    </li>
                   </ul>
                 </div>
 
                 <div className="exercise-card">
                   <div className="ex-card-header">
-                    <div className="ex-icon-box">🚴‍♀️</div>
+                    <div className="ex-icon-box">Cycling</div>
+
                     <div>
-                      <div className="ex-title">Stationary Recumbent Bike</div>
-                      <div className="ex-meta">20 Mins · Low Resistance</div>
+                      <div className="ex-title">
+                        Stationary Recumbent Bike
+                      </div>
+
+                      <div className="ex-meta">
+                        20 Mins · Low Resistance
+                      </div>
                     </div>
                   </div>
+
                   <div className="ex-desc">
-                    Safe non-weight-bearing aerobic exercise that eliminates tipping or fall hazards.
+                    Safe non-weight-bearing aerobic exercise that
+                    eliminates tipping or fall hazards.
                   </div>
+
                   <ul className="ex-tips-list">
-                    <li>Keep seat adjusted to support lumbar spine</li>
-                    <li>Set resistance to low-moderate level</li>
-                    <li>Stop immediately if feeling fatigued</li>
+                    <li>
+                      Keep seat adjusted to support lumbar spine
+                    </li>
+                    <li>
+                      Set resistance to low-moderate level
+                    </li>
+                    <li>
+                      Stop immediately if feeling fatigued
+                    </li>
                   </ul>
                 </div>
 
                 <div className="exercise-card">
                   <div className="ex-card-header">
-                    <div className="ex-icon-box">🧘</div>
+                    <div className="ex-icon-box">Pilates</div>
+
                     <div>
-                      <div className="ex-title">Modified Prenatal Pilates</div>
-                      <div className="ex-meta">20 Mins · 3 Days / Week</div>
+                      <div className="ex-title">
+                        Modified Prenatal Pilates
+                      </div>
+
+                      <div className="ex-meta">
+                        20 Mins · 3 Days / Week
+                      </div>
                     </div>
                   </div>
+
                   <div className="ex-desc">
-                    Core stabilization and pelvic floor conditioning with pregnancy-safe props and bolsters.
+                    Core stabilization and pelvic floor conditioning
+                    with pregnancy-safe props and bolsters.
                   </div>
+
                   <ul className="ex-tips-list">
-                    <li>Use resistance bands and yoga blocks</li>
-                    <li>Avoid any abdominal crunches or compression</li>
-                    <li>Keep glucose candy or tablets in reach</li>
+                    <li>
+                      Use resistance bands and yoga blocks
+                    </li>
+                    <li>
+                      Avoid any abdominal crunches or compression
+                    </li>
+                    <li>
+                      Keep glucose candy or tablets in reach
+                    </li>
                   </ul>
                 </div>
               </>
@@ -662,234 +881,532 @@ export default function Recommendations({ result, formData, inline = false }) {
 
             {riskTier === "high" && (
               <>
-                <div className="exercise-card" style={{borderLeft:"4px solid #ef4444"}}>
+                <div
+                  className="exercise-card"
+                  style={{
+                    borderLeft: "4px solid #ef4444"
+                  }}
+                >
                   <div className="ex-card-header">
-                    <div className="ex-icon-box">🛋️</div>
+                    <div className="ex-icon-box">
+                      Mobility
+                    </div>
+
                     <div>
-                      <div className="ex-title">Seated Mobility &amp; Stretches</div>
-                      <div className="ex-meta">10-15 Mins · Low Exertion</div>
+                      <div className="ex-title">
+                        Seated Mobility &amp; Stretches
+                      </div>
+
+                      <div className="ex-meta">
+                        10-15 Mins · Low Exertion
+                      </div>
                     </div>
                   </div>
+
                   <div className="ex-desc">
-                    Non-strenuous seated upper body circles, ankle rotations, and gentle neck mobility to stimulate circulation.
+                    Non-strenuous seated upper body circles, ankle
+                    rotations, and gentle neck mobility to stimulate
+                    circulation.
                   </div>
+
                   <ul className="ex-tips-list">
-                    <li>Perform while seated comfortably on a sturdy chair</li>
-                    <li>Ankle pumps to prevent lower leg edema</li>
-                    <li>Never hold your breath (avoid Valsalva maneuver)</li>
+                    <li>
+                      Perform while seated comfortably on a sturdy
+                      chair
+                    </li>
+                    <li>
+                      Ankle pumps to prevent lower leg edema
+                    </li>
+                    <li>
+                      Never hold your breath (avoid Valsalva
+                      maneuver)
+                    </li>
                   </ul>
                 </div>
 
                 <div className="exercise-card">
                   <div className="ex-card-header">
-                    <div className="ex-icon-box">🫁</div>
+                    <div className="ex-icon-box">
+                      Breathing
+                    </div>
+
                     <div>
-                      <div className="ex-title">Diaphragmatic Breathing &amp; Relaxation</div>
-                      <div className="ex-meta">10 Mins · Morning &amp; Night</div>
+                      <div className="ex-title">
+                        Diaphragmatic Breathing &amp; Relaxation
+                      </div>
+
+                      <div className="ex-meta">
+                        10 Mins · Morning &amp; Night
+                      </div>
                     </div>
                   </div>
+
                   <div className="ex-desc">
-                    Lowers cortisol and sympathetic stress, aiding blood pressure and metabolic stabilization.
+                    Lowers cortisol and sympathetic stress, aiding
+                    blood pressure and metabolic stabilization.
                   </div>
+
                   <ul className="ex-tips-list">
-                    <li>4-second inhale through nose, 6-second slow exhale</li>
-                    <li>Promotes optimal oxygenation for fetus</li>
-                    <li>Reduces maternal heart rate and anxiety</li>
+                    <li>
+                      4-second inhale through nose, 6-second slow
+                      exhale
+                    </li>
+                    <li>
+                      Promotes optimal oxygenation for fetus
+                    </li>
+                    <li>
+                      Reduces maternal heart rate and anxiety
+                    </li>
                   </ul>
                 </div>
 
                 <div className="exercise-card">
                   <div className="ex-card-header">
-                    <div className="ex-icon-box">🚶</div>
+                    <div className="ex-icon-box">
+                      Walking
+                    </div>
+
                     <div>
-                      <div className="ex-title">Gentle Indoor Shuffling / Pacing</div>
-                      <div className="ex-meta">5-10 Mins as Tolerated</div>
+                      <div className="ex-title">
+                        Gentle Indoor Shuffling / Pacing
+                      </div>
+
+                      <div className="ex-meta">
+                        5-10 Mins as Tolerated
+                      </div>
                     </div>
                   </div>
+
                   <div className="ex-desc">
-                    Slow, restful indoor walking on even flat surfaces to keep blood moving and prevent deep vein thrombosis.
+                    Slow, restful indoor walking on even flat
+                    surfaces to keep blood moving and prevent deep
+                    vein thrombosis.
                   </div>
+
                   <ul className="ex-tips-list">
-                    <li>Walk only in a well-ventilated, cool room</li>
-                    <li>Rest with legs elevated afterwards</li>
-                    <li>Stop immediately if any discomfort arises</li>
+                    <li>
+                      Walk only in a well-ventilated, cool room
+                    </li>
+                    <li>
+                      Rest with legs elevated afterwards
+                    </li>
+                    <li>
+                      Stop immediately if any discomfort arises
+                    </li>
                   </ul>
                 </div>
               </>
             )}
           </div>
 
-          {/* Red Flag Emergency Checklist */}
+          {/* Warning Checklist */}
           <div className="red-flag-box">
             <div className="red-flag-title">
-              🚨 Universal Warning Signs to Stop Exercise Immediately:
+              Universal Warning Signs to Stop Exercise Immediately:
             </div>
+
             <div className="red-flag-items">
-              <div className="red-flag-chip">Vaginal Bleeding or Spotting</div>
-              <div className="red-flag-chip">Painful Uterine Contractions</div>
-              <div className="red-flag-chip">Dizziness, Faintness or Blurred Vision</div>
-              <div className="red-flag-chip">Amniotic Fluid Leakage</div>
-              <div className="red-flag-chip">Chest Pain or Rapid Palpitations</div>
-              <div className="red-flag-chip">Severe Calf Swelling or Unilateral Pain</div>
+              <div className="red-flag-chip">
+                Vaginal Bleeding or Spotting
+              </div>
+
+              <div className="red-flag-chip">
+                Painful Uterine Contractions
+              </div>
+
+              <div className="red-flag-chip">
+                Dizziness, Faintness or Blurred Vision
+              </div>
+
+              <div className="red-flag-chip">
+                Amniotic Fluid Leakage
+              </div>
+
+              <div className="red-flag-chip">
+                Chest Pain or Rapid Palpitations
+              </div>
+
+              <div className="red-flag-chip">
+                Severe Calf Swelling or Unilateral Pain
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* TAB 2: NUTRITION & DIETARY GUIDANCE                       */}
-      {/* ────────────────────────────────────────────────────────── */}
+      {/* NUTRITION & DIETARY GUIDANCE */}
       {activeTab === "diet" && (
         <div>
-          <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",flexWrap:"wrap",gap:".5rem",marginBottom:".75rem"}}>
-            <h3 style={{margin:0,color:"var(--navy)"}}>Maternal Glycemic Nutrition Guide</h3>
-            <span style={{fontSize:".85rem",color:"var(--teal-dark)",fontWeight:600}}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: ".5rem",
+              marginBottom: ".75rem"
+            }}
+          >
+            <h3 style={{ margin: 0, color: "var(--navy)" }}>
+              Maternal Glycemic Nutrition Guide
+            </h3>
+
+            <span
+              style={{
+                fontSize: ".85rem",
+                color: "var(--teal-dark)",
+                fontWeight: 600
+              }}
+            >
               Focus: Stable Blood Sugar &amp; Optimal Fetal Growth
             </span>
           </div>
 
-          {/* The Plate Method Visualizer */}
+          {/* Plate Method */}
           <div className="plate-method-box">
             <div className="plate-method-header">
-              🍽️ The Maternal Diabetes Plate Method
+              The Maternal Diabetes Plate Method
             </div>
-            <p style={{fontSize:".85rem",color:"var(--slate)",marginBottom:"1rem"}}>
-              For lunch and dinner, balance your plate using these clinical proportions to prevent blood glucose spikes:
+
+            <p
+              style={{
+                fontSize: ".85rem",
+                color: "var(--slate)",
+                marginBottom: "1rem"
+              }}
+            >
+              For lunch and dinner, balance your plate using these
+              clinical proportions to prevent blood glucose spikes:
             </p>
+
             <div className="plate-visual">
               <div className="plate-half">
-                🥬 50% Non-Starchy Vegetables &amp; Fiber
-                <div style={{fontSize:".75rem",fontWeight:400,marginTop:".25rem",color:"#047857"}}>
-                  Spinach (Palak), Methi, Broccoli, Cucumbers, Gourds (Lauki/Turai), Bell Peppers, Salad Greens
+                50% Non-Starchy Vegetables &amp; Fiber
+
+                <div
+                  style={{
+                    fontSize: ".75rem",
+                    fontWeight: 400,
+                    marginTop: ".25rem",
+                    color: "#047857"
+                  }}
+                >
+                  Spinach (Palak), Methi, Broccoli, Cucumbers,
+                  Gourds (Lauki/Turai), Bell Peppers, Salad Greens
                 </div>
               </div>
+
               <div className="plate-quarter-1">
-                🍗 25% Lean Protein
-                <div style={{fontSize:".75rem",fontWeight:400,marginTop:".25rem",color:"#0284c7"}}>
-                  Sprouted Moong, Paneer, Boiled Eggs, Skinless Chicken, Tofu, Lentils (Dal)
+                25% Lean Protein
+
+                <div
+                  style={{
+                    fontSize: ".75rem",
+                    fontWeight: 400,
+                    marginTop: ".25rem",
+                    color: "#0284c7"
+                  }}
+                >
+                  Sprouted Moong, Paneer, Boiled Eggs, Skinless
+                  Chicken, Tofu, Lentils (Dal)
                 </div>
               </div>
+
               <div className="plate-quarter-2">
-                🌾 25% Complex Low-GI Carbs
-                <div style={{fontSize:".75rem",fontWeight:400,marginTop:".25rem",color:"#b45309"}}>
-                  Brown/Hand-pounded Rice, Whole Wheat Roti, Ragi/Jowar, Steel-cut Oats, Quinoa
+                25% Complex Low-GI Carbs
+
+                <div
+                  style={{
+                    fontSize: ".75rem",
+                    fontWeight: 400,
+                    marginTop: ".25rem",
+                    color: "#b45309"
+                  }}
+                >
+                  Brown/Hand-pounded Rice, Whole Wheat Roti,
+                  Ragi/Jowar, Steel-cut Oats, Quinoa
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Detailed Diet Recommendations Grid */}
+          {/* Detailed Diet Recommendations */}
           <div className="diet-grid">
+
             <div className="diet-card">
               <div className="diet-card-title">
-                <span>🌾</span> Complex Low-GI Carbohydrates
+                Complex Low-GI Carbohydrates
               </div>
+
               <div className="diet-item">
-                <div className="diet-item-name">Whole Millets &amp; Multi-grains</div>
-                <div className="diet-item-detail">Ragi, Jowar, Bajra, and Foxtail millet release glucose slowly into the bloodstream.</div>
+                <div className="diet-item-name">
+                  Whole Millets &amp; Multi-grains
+                </div>
+
+                <div className="diet-item-detail">
+                  Ragi, Jowar, Bajra, and Foxtail millet release
+                  glucose slowly into the bloodstream.
+                </div>
               </div>
+
               <div className="diet-item">
-                <div className="diet-item-name">Steel-cut or Rolled Oats</div>
-                <div className="diet-item-detail">Rich in beta-glucan soluble fiber that reduces morning fasting spikes.</div>
+                <div className="diet-item-name">
+                  Steel-cut or Rolled Oats
+                </div>
+
+                <div className="diet-item-detail">
+                  Rich in beta-glucan soluble fiber that reduces
+                  morning fasting spikes.
+                </div>
               </div>
+
               <div className="diet-item">
-                <div className="diet-item-name">Hand-pounded / Brown Basmati</div>
-                <div className="diet-item-detail">Limit portion to 1 small bowl; pair with double the quantity of dal and vegetables.</div>
+                <div className="diet-item-name">
+                  Hand-pounded / Brown Basmati
+                </div>
+
+                <div className="diet-item-detail">
+                  Limit portion to 1 small bowl; pair with double
+                  the quantity of dal and vegetables.
+                </div>
               </div>
             </div>
 
             <div className="diet-card">
               <div className="diet-card-title">
-                <span>🥑</span> Healthy Fats &amp; Proteins
+                Healthy Fats &amp; Proteins
               </div>
+
               <div className="diet-item">
-                <div className="diet-item-name">Nuts &amp; Seeds Blend</div>
-                <div className="diet-item-detail">Handful of soaked almonds, walnuts (rich in Omega-3 for fetal brain development), and chia seeds.</div>
+                <div className="diet-item-name">
+                  Nuts &amp; Seeds Blend
+                </div>
+
+                <div className="diet-item-detail">
+                  Handful of soaked almonds, walnuts (rich in
+                  Omega-3 for fetal brain development), and chia
+                  seeds.
+                </div>
               </div>
+
               <div className="diet-item">
-                <div className="diet-item-name">Lean Bioavailable Proteins</div>
-                <div className="diet-item-detail">Sprouted legumes, boiled eggs, unsweetened Greek yogurt (curd) provide essential amino acids.</div>
+                <div className="diet-item-name">
+                  Lean Bioavailable Proteins
+                </div>
+
+                <div className="diet-item-detail">
+                  Sprouted legumes, boiled eggs, unsweetened Greek
+                  yogurt (curd) provide essential amino acids.
+                </div>
               </div>
+
               <div className="diet-item">
-                <div className="diet-item-name">Cold-Pressed Oils</div>
-                <div className="diet-item-detail">Extra virgin olive oil, cold-pressed mustard or groundnut oil; moderate pure cow ghee.</div>
+                <div className="diet-item-name">
+                  Cold-Pressed Oils
+                </div>
+
+                <div className="diet-item-detail">
+                  Extra virgin olive oil, cold-pressed mustard or
+                  groundnut oil; moderate pure cow ghee.
+                </div>
               </div>
             </div>
 
             <div className="diet-card">
               <div className="diet-card-title">
-                <span>🕒</span> Meal Timing &amp; Hydration
+                Meal Timing &amp; Hydration
               </div>
+
               <div className="diet-item">
-                <div className="diet-item-name">Small Frequent Meals</div>
-                <div className="diet-item-detail">3 moderate meals + 2-3 healthy snacks spaced 2.5-3 hours apart. Never fast or skip breakfast.</div>
+                <div className="diet-item-name">
+                  Small Frequent Meals
+                </div>
+
+                <div className="diet-item-detail">
+                  3 moderate meals + 2-3 healthy snacks spaced
+                  2.5-3 hours apart. Never fast or skip breakfast.
+                </div>
               </div>
+
               <div className="diet-item">
-                <div className="diet-item-name">Hydration Protocol</div>
-                <div className="diet-item-detail">Target 2.5 to 3 Liters of water daily. Add lemon slices or mint for natural flavor.</div>
+                <div className="diet-item-name">
+                  Hydration Protocol
+                </div>
+
+                <div className="diet-item-detail">
+                  Target 2.5 to 3 Liters of water daily. Add lemon
+                  slices or mint for natural flavor.
+                </div>
               </div>
+
               <div className="diet-item">
-                <div className="diet-item-name">Bedtime Protein Snack</div>
-                <div className="diet-item-detail">A small cup of warm unsweetened milk with turmeric or a boiled egg prevents the Dawn Phenomenon.</div>
+                <div className="diet-item-name">
+                  Bedtime Protein Snack
+                </div>
+
+                <div className="diet-item-detail">
+                  A small cup of warm unsweetened milk with turmeric
+                  or a boiled egg prevents the Dawn Phenomenon.
+                </div>
               </div>
             </div>
 
-            <div className="diet-card" style={{border:"1.5px solid #fecaca",background:"#fffafb"}}>
-              <div className="diet-card-title" style={{color:"#dc2626"}}>
-                <span>🚫</span> Foods to Strictly Limit or Avoid
+            <div
+              className="diet-card"
+              style={{
+                border: "1.5px solid #fecaca",
+                background: "#fffafb"
+              }}
+            >
+              <div
+                className="diet-card-title"
+                style={{ color: "#dc2626" }}
+              >
+                Foods to Strictly Limit or Avoid
               </div>
+
               <div className="diet-item">
-                <div className="diet-item-name" style={{color:"#b91c1c"}}>Refined Flour &amp; Sugars</div>
-                <div className="diet-item-detail">Maida, white bread, pastries, sweets (mithai), packaged breakfast cereals.</div>
+                <div
+                  className="diet-item-name"
+                  style={{ color: "#b91c1c" }}
+                >
+                  Refined Flour &amp; Sugars
+                </div>
+
+                <div className="diet-item-detail">
+                  Maida, white bread, pastries, sweets (mithai),
+                  packaged breakfast cereals.
+                </div>
               </div>
+
               <div className="diet-item">
-                <div className="diet-item-name" style={{color:"#b91c1c"}}>Liquid Sugars &amp; Fruit Juices</div>
-                <div className="diet-item-detail">Packaged juices, carbonated beverages, sugary teas/coffees trigger rapid glucose spikes.</div>
+                <div
+                  className="diet-item-name"
+                  style={{ color: "#b91c1c" }}
+                >
+                  Liquid Sugars &amp; Fruit Juices
+                </div>
+
+                <div className="diet-item-detail">
+                  Packaged juices, carbonated beverages, sugary
+                  teas/coffees trigger rapid glucose spikes.
+                </div>
               </div>
+
               <div className="diet-item">
-                <div className="diet-item-name" style={{color:"#b91c1c"}}>High-GI Tropical Fruits in Excess</div>
-                <div className="diet-item-detail">Limit mangoes, chikoo, grapes, and custard apples. Prefer apples, guavas, berries, and oranges.</div>
+                <div
+                  className="diet-item-name"
+                  style={{ color: "#b91c1c" }}
+                >
+                  High-GI Tropical Fruits in Excess
+                </div>
+
+                <div className="diet-item-detail">
+                  Limit mangoes, chikoo, grapes, and custard apples.
+                  Prefer apples, guavas, berries, and oranges.
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* TAB 3: DOCTOR & SPECIALIST MATCHING                       */}
-      {/* ────────────────────────────────────────────────────────── */}
+      {/* DOCTOR & SPECIALIST MATCHING */}
       {activeTab === "doctor" && (
         <div>
-          <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",flexWrap:"wrap",gap:".5rem",marginBottom:"1rem"}}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: ".5rem",
+              marginBottom: "1rem"
+            }}
+          >
             <div>
-              <h3 style={{margin:0,color:"var(--navy)"}}>Maternal Specialist Directory</h3>
-              <p style={{margin:"0.2rem 0 0",fontSize:".85rem",color:"var(--muted)"}}>
-                Find obstetricians, perinatologists, and endocrine specialists near your location.
+              <h3
+                style={{
+                  margin: 0,
+                  color: "var(--navy)"
+                }}
+              >
+                Maternal Specialist Directory
+              </h3>
+
+              <p
+                style={{
+                  margin: "0.2rem 0 0",
+                  fontSize: ".85rem",
+                  color: "var(--muted)"
+                }}
+              >
+                Find obstetricians, perinatologists, and endocrine
+                specialists near your location.
               </p>
             </div>
 
             {/* Geolocation Button */}
-            <button className="location-btn" onClick={detectLocation} disabled={locationStatus === "locating"}>
-              {locationStatus === "locating" ? "📡 Locating…" : "📍 Detect My Current Location"}
+            <button
+              className="location-btn"
+              onClick={detectLocation}
+              disabled={locationStatus === "locating"}
+            >
+              {locationStatus === "locating"
+                ? "Locating..."
+                : "Detect My Current Location"}
             </button>
           </div>
 
-          {/* Quick City Selector Pills */}
+          {/* Quick City Selector */}
           <div className="city-pills-row">
-            <span style={{fontSize:".8rem",fontWeight:700,color:"var(--slate-600)",marginRight:".25rem"}}>Quick Filter:</span>
+            <span
+              style={{
+                fontSize: ".8rem",
+                fontWeight: 700,
+                color: "var(--slate-600)",
+                marginRight: ".25rem"
+              }}
+            >
+              Quick Filter:
+            </span>
+
             {[
-              { label: "📍 Kolkata (WB)", value: "Kolkata" },
-              { label: "📍 Bengaluru",    value: "Bengaluru" },
-              { label: "📍 New Delhi",    value: "New Delhi" },
-              { label: "📍 Mumbai",       value: "Mumbai" },
-              { label: "📍 Hyderabad",    value: "Hyderabad" },
-              { label: "📍 Chennai",      value: "Chennai" },
-              { label: "🌐 All Cities",   value: "All Cities" },
-            ].map(c => (
+              {
+                label: "Kolkata (WB)",
+                value: "Kolkata"
+              },
+              {
+                label: "Bengaluru",
+                value: "Bengaluru"
+              },
+              {
+                label: "New Delhi",
+                value: "New Delhi"
+              },
+              {
+                label: "Mumbai",
+                value: "Mumbai"
+              },
+              {
+                label: "Hyderabad",
+                value: "Hyderabad"
+              },
+              {
+                label: "Chennai",
+                value: "Chennai"
+              },
+              {
+                label: "All Cities",
+                value: "All Cities"
+              }
+            ].map((c) => (
               <button
                 key={c.value}
                 type="button"
-                className={`city-pill-btn ${selectedCity === c.value ? "active" : ""}`}
+                className={`city-pill-btn ${
+                  selectedCity === c.value ? "active" : ""
+                }`}
                 onClick={() => {
                   setSelectedCity(c.value);
                   setSearchQuery("");
@@ -902,89 +1419,213 @@ export default function Recommendations({ result, formData, inline = false }) {
 
           {/* Search and Filters Bar */}
           <div className="doc-search-bar">
-            <div style={{flex:1,minWidth:220}}>
+            <div
+              style={{
+                flex: 1,
+                minWidth: 220
+              }}
+            >
               <input
                 type="text"
-                placeholder="🔍 Search Kolkata hospital, doctor (e.g., Apollo, Fortis, Neotia, Alipore)…"
+                placeholder="Search hospital or doctor (e.g., Apollo, Fortis, Neotia, Alipore)..."
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                style={{width:"100%",padding:".6rem .9rem",borderRadius:10,border:"1px solid var(--border)",fontFamily:"var(--font-body)",fontSize:".88rem"}}
+                onChange={(e) =>
+                  setSearchQuery(e.target.value)
+                }
+                style={{
+                  width: "100%",
+                  padding: ".6rem .9rem",
+                  borderRadius: 10,
+                  border: "1px solid var(--border)",
+                  fontFamily: "var(--font-body)",
+                  fontSize: ".88rem"
+                }}
               />
             </div>
 
-            <div style={{minWidth:160}}>
+            <div style={{ minWidth: 160 }}>
               <select
                 value={selectedCity}
-                onChange={e => setSelectedCity(e.target.value)}
-                style={{width:"100%",padding:".6rem .9rem",borderRadius:10,border:"1px solid var(--border)",fontFamily:"var(--font-body)",fontSize:".88rem",background:"white"}}
+                onChange={(e) =>
+                  setSelectedCity(e.target.value)
+                }
+                style={{
+                  width: "100%",
+                  padding: ".6rem .9rem",
+                  borderRadius: 10,
+                  border: "1px solid var(--border)",
+                  fontFamily: "var(--font-body)",
+                  fontSize: ".88rem",
+                  background: "white"
+                }}
               >
-                <option value="Kolkata">Kolkata (West Bengal)</option>
-                <option value="Bengaluru">Bengaluru (Karnataka)</option>
-                <option value="Mumbai">Mumbai (Maharashtra)</option>
-                <option value="New Delhi">New Delhi / NCR</option>
-                <option value="Hyderabad">Hyderabad (Telangana)</option>
-                <option value="Chennai">Chennai (Tamil Nadu)</option>
-                <option value="All Cities">All Cities (All India)</option>
+                <option value="Kolkata">
+                  Kolkata (West Bengal)
+                </option>
+
+                <option value="Bengaluru">
+                  Bengaluru (Karnataka)
+                </option>
+
+                <option value="Mumbai">
+                  Mumbai (Maharashtra)
+                </option>
+
+                <option value="New Delhi">
+                  New Delhi / NCR
+                </option>
+
+                <option value="Hyderabad">
+                  Hyderabad (Telangana)
+                </option>
+
+                <option value="Chennai">
+                  Chennai (Tamil Nadu)
+                </option>
+
+                <option value="All Cities">
+                  All Cities (All India)
+                </option>
               </select>
             </div>
 
             {locationStatus === "located" && (
               <span className="location-status-badge">
-                ✅ Live GPS Sorted (Nearest First)
+                Live GPS Sorted (Nearest First)
               </span>
             )}
-            {locationStatus !== "located" && selectedCity !== "All Cities" && (
-              <span className="location-status-badge" style={{color:"var(--teal-dark)"}}>
-                📍 {selectedCity}: {filteredDoctors.length} Specialists Available
-              </span>
-            )}
+
+            {locationStatus !== "located" &&
+              selectedCity !== "All Cities" && (
+                <span
+                  className="location-status-badge"
+                  style={{
+                    color: "var(--teal-dark)"
+                  }}
+                >
+                  {selectedCity}: {filteredDoctors.length}{" "}
+                  Specialists Available
+                </span>
+              )}
           </div>
 
-          {/* High risk prompt */}
+          {/* High Risk Prompt */}
           {riskTier === "high" && (
-            <div className="red-flag-box" style={{marginBottom:"1.25rem"}}>
+            <div
+              className="red-flag-box"
+              style={{ marginBottom: "1.25rem" }}
+            >
               <div className="red-flag-title">
-                🚨 Urgent Specialist Consultation Recommended
+                Urgent Specialist Consultation Recommended
               </div>
-              <p style={{fontSize:".85rem",lineHeight:1.5}}>
-                Given your assessment score ({gdmScore}%), we advise scheduling an in-person or teleconsultation with a Maternal-Fetal Medicine (MFM) specialist or Diabetologist within <strong>24 to 48 hours</strong>.
+
+              <p
+                style={{
+                  fontSize: ".85rem",
+                  lineHeight: 1.5
+                }}
+              >
+                Given your assessment score ({gdmScore}%), we
+                advise scheduling an in-person or teleconsultation
+                with a Maternal-Fetal Medicine (MFM) specialist or
+                Diabetologist within{" "}
+                <strong>24 to 48 hours</strong>.
               </p>
             </div>
           )}
 
-          {/* Doctor Cards Grid */}
+          {/* Doctor Cards */}
           <div className="doctor-cards-list">
             {filteredDoctors.length === 0 ? (
-              <div className="card" style={{gridColumn:"1/-1",textAlign:"center",padding:"2rem"}}>
-                <div style={{fontSize:"2rem",marginBottom:".5rem"}}>🏥</div>
-                <p style={{color:"var(--muted)"}}>No clinics matching your filter. Try selecting "All Cities" or searching for a hospital.</p>
-                <button className="btn btn-secondary" onClick={() => { setSelectedCity("All Cities"); setSearchQuery(""); }}>
+              <div
+                className="card"
+                style={{
+                  gridColumn: "1/-1",
+                  textAlign: "center",
+                  padding: "2rem"
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "2rem",
+                    marginBottom: ".5rem"
+                  }}
+                >
+                  Hospital
+                </div>
+
+                <p style={{ color: "var(--muted)" }}>
+                  No clinics matching your filter. Try selecting
+                  "All Cities" or searching for a hospital.
+                </p>
+
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setSelectedCity("All Cities");
+                    setSearchQuery("");
+                  }}
+                >
                   Reset Filters
                 </button>
               </div>
             ) : (
-              filteredDoctors.map(doc => {
-                const isRecommended = doc.recommendedFor.includes(riskTier);
+              filteredDoctors.map((doc) => {
+                const isRecommended =
+                  doc.recommendedFor.includes(riskTier);
+
                 return (
-                  <div key={doc.id} className="doctor-card">
+                  <div
+                    key={doc.id}
+                    className="doctor-card"
+                  >
                     <div>
                       <div className="doc-card-top">
                         <div className="doc-avatar">
-                          {doc.name.split(" ")[1]?.charAt(0) || "D"}
+                          {doc.name.split(" ")[1]?.charAt(0) ||
+                            "D"}
                         </div>
+
                         <div className="doc-info">
-                          <div className="doc-name">{doc.name}</div>
-                          <div className="doc-spec">{doc.speciality}</div>
-                          <div className="doc-hospital">🏥 {doc.hospital}</div>
-                          <div style={{fontSize:".75rem",color:"var(--muted)",marginTop:".2rem"}}>
-                            📍 {doc.address}
+                          <div className="doc-name">
+                            {doc.name}
+                          </div>
+
+                          <div className="doc-spec">
+                            {doc.speciality}
+                          </div>
+
+                          <div className="doc-hospital">
+                            {doc.hospital}
+                          </div>
+
+                          <div
+                            style={{
+                              fontSize: ".75rem",
+                              color: "var(--muted)",
+                              marginTop: ".2rem"
+                            }}
+                          >
+                            {doc.address}
                           </div>
                         </div>
                       </div>
 
                       {isRecommended && (
-                        <div style={{marginTop:".75rem",display:"inline-block",padding:".2rem .6rem",borderRadius:6,background:"#f0fdfa",color:"var(--teal-dark)",fontSize:".75rem",fontWeight:700}}>
-                          ⭐ Recommended for {riskTier.toUpperCase()} risk profiles
+                        <div
+                          style={{
+                            marginTop: ".75rem",
+                            display: "inline-block",
+                            padding: ".2rem .6rem",
+                            borderRadius: 6,
+                            background: "#f0fdfa",
+                            color: "var(--teal-dark)",
+                            fontSize: ".75rem",
+                            fontWeight: 700
+                          }}
+                        >
+                          Recommended for{" "}
+                          {riskTier.toUpperCase()} risk profiles
                         </div>
                       )}
                     </div>
@@ -993,27 +1634,50 @@ export default function Recommendations({ result, formData, inline = false }) {
                       <div className="doc-meta-row">
                         <div>
                           {doc.distanceKm !== null ? (
-                            <span className="doc-dist">📍 {doc.distanceKm} km away</span>
+                            <span className="doc-dist">
+                              {doc.distanceKm} km away
+                            </span>
                           ) : (
-                            <span style={{color:"var(--muted)"}}>📍 {doc.city}, {doc.state}</span>
+                            <span
+                              style={{
+                                color: "var(--muted)"
+                              }}
+                            >
+                              {doc.city}, {doc.state}
+                            </span>
                           )}
                         </div>
+
                         <div className="doc-rating">
-                          ⭐ {doc.rating} ({doc.experience})
+                          {doc.rating} ({doc.experience})
                         </div>
                       </div>
 
-                      <div className="doc-actions" style={{marginTop:".75rem"}}>
-                        <a href={`tel:${doc.phone.replace(/[^0-9+]/g, '')}`} className="doc-action-btn primary">
-                          📞 Call Clinic
-                        </a>
+                      <div
+                        className="doc-actions"
+                        style={{
+                          marginTop: ".75rem"
+                        }}
+                      >
                         <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(doc.hospital + " " + doc.address)}`}
+                          href={`tel:${doc.phone.replace(
+                            /[^0-9+]/g,
+                            ""
+                          )}`}
+                          className="doc-action-btn primary"
+                        >
+                          Call Clinic
+                        </a>
+
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                            doc.hospital + " " + doc.address
+                          )}`}
                           target="_blank"
                           rel="noreferrer"
                           className="doc-action-btn outline"
                         >
-                          🗺️ View Map
+                          View Map
                         </a>
                       </div>
                     </div>
@@ -1025,9 +1689,16 @@ export default function Recommendations({ result, formData, inline = false }) {
         </div>
       )}
 
-      {/* ── Medical Disclaimer ── */}
+      {/* Medical Disclaimer */}
       <div className="disclaimer-footer">
-        <strong>⚠️ Clinical Disclaimer:</strong> SPARSHA.AI provides automated risk stratification and evidence-based educational insights. It does not replace individualized clinical judgment, laboratory Oral Glucose Tolerance Testing (OGTT), or obstetric medical nutrition therapy (MNT). Please consult your primary healthcare provider before making significant dietary or exercise modifications.
+        <strong>Clinical Disclaimer:</strong>{" "}
+        SPARSHA.AI provides automated risk stratification and
+        evidence-based educational insights. It does not replace
+        individualized clinical judgment, laboratory Oral Glucose
+        Tolerance Testing (OGTT), or obstetric medical nutrition
+        therapy (MNT). Please consult your primary healthcare
+        provider before making significant dietary or exercise
+        modifications.
       </div>
     </div>
   );
