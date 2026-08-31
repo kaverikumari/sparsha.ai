@@ -4,10 +4,10 @@ import LoadingScreen from "../components/LoadingScreen";
 import "./Loginpage.css";
 
 const ROLES = [
-  { id: "patient", label: "Patient",       icon: "🤱" },
-  { id: "doctor",  label: "Doctor",        icon: "👨‍⚕️" },
-  { id: "admin",   label: "Admin",         icon: "🛡️" },
-  { id: "family",  label: "Family Member", icon: "👨‍👩‍👧" },
+  { id: "patient", label: "Patient",   },
+  { id: "doctor",  label: "Doctor",  },
+  { id: "admin",   label: "Admin",  },
+  { id: "family",  label: "Family Member" },
 ];
 
 export default function LoginPage({ navigate, onDemo }) {
